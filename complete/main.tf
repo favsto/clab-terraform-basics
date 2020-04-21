@@ -37,6 +37,23 @@ resource "google_compute_firewall" "bastionnet-bastion-ssh" {
   target_tags = ["bastion-host"]
 }
 
+# Add a firewall rule to allow SSH and HTTP traffic on bastionnet for a specific tag
+resource "google_compute_firewall" "bastionnet-bastion-ssh" {
+  name    = "bastionnet-allow-ssh-bastion"
+  network = google_compute_network.bastion.self_link
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22", "80"]
+  }
+
+  allow {
+    protocol = "icmp"
+  }
+
+  target_tags = ["webserver"]
+}
+
 # Add a firewall rule to allow all internal traffic on bastionnet for all instances in the network
 resource "google_compute_firewall" "bastionnet-allow-internal" {
   name    = "bastionnet-allow-internal"
@@ -82,6 +99,18 @@ module "private-vm" {
 
   network-tags = [
     "private-host"
+  ]
+}
+
+# Add the webserver instance
+module "webserver-vm" {
+  source              = "./instance"
+  instance_name       = "webserver"
+  instance_zone       = "${var.gcp_region}-${var.gcp_zone_letter}"
+  instance_subnetwork = google_compute_subnetwork.bastion-public.self_link
+
+  network-tags = [
+    "webserver"
   ]
 }
 
