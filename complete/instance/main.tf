@@ -11,7 +11,7 @@ variable "avoid-external-ip" {
   default = false
 }
 variable "network-tags" {
-  type = "list"
+  type = list
   default = []
 }
 
