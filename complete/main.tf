@@ -7,7 +7,7 @@ resource "google_compute_network" "bastion" {
 # Create bastionnet-eu-public subnetwork
 resource "google_compute_subnetwork" "bastion-public" {
   name          = "bastionnet-eu-public"
-  region        = "${var.gcp_region}"
+  region        = var.gcp_region
   network       = google_compute_network.bastion.self_link
   ip_cidr_range = "10.130.0.0/20"
 }
@@ -15,7 +15,7 @@ resource "google_compute_subnetwork" "bastion-public" {
 # Create bastionnet-eu-private subnetwork
 resource "google_compute_subnetwork" "bastion-private" {
   name          = "bastionnet-eu-private"
-  region        = "${var.gcp_region}"
+  region        = var.gcp_region
   network       = google_compute_network.bastion.self_link
   ip_cidr_range = "10.131.0.0/20"
 }
@@ -88,6 +88,6 @@ module "private-vm" {
 # Add the NAT server
 module "nat-service" {
   source = "./nat"
-  region = "${var.gcp_region}"
-  subnetwork = "${google_compute_network.bastion.self_link}"
+  region = var.gcp_region
+  subnetwork = google_compute_network.bastion.self_link
 }
