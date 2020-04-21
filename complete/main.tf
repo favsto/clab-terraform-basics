@@ -38,8 +38,8 @@ resource "google_compute_firewall" "bastionnet-bastion-ssh" {
 }
 
 # Add a firewall rule to allow SSH and HTTP traffic on bastionnet for a specific tag
-resource "google_compute_firewall" "bastionnet-bastion-ssh" {
-  name    = "bastionnet-allow-ssh-bastion"
+resource "google_compute_firewall" "bastionnet-wenserver-ssh-http" {
+  name    = "bastionnet-allow-webserver"
   network = google_compute_network.bastion.self_link
 
   allow {
