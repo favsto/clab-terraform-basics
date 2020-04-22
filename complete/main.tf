@@ -1,3 +1,9 @@
+locals {
+  gce_user = "terraform"
+  gce_public_key_path = "assets/terraform_key.pub"
+}
+
+
 # Create the bastionnet network
 resource "google_compute_network" "bastion" {
   name                    = "bastionnet"
@@ -102,16 +108,60 @@ module "private-vm" {
   ]
 }
 
-# Add the webserver instance
-module "webserver-vm" {
-  source              = "./instance"
-  instance_name       = "webserver"
-  instance_zone       = "${var.gcp_region}-${var.gcp_zone_letter}"
-  instance_subnetwork = google_compute_subnetwork.bastion-public.self_link
+resource "google_compute_instance" "webserver" {
+  name         = "webserver"
+  zone         = "${var.gcp_region}-${var.gcp_zone_letter}"
+  machine_type = "n1-standard-1"
 
-  network-tags = [
+  tags = [
     "webserver"
   ]
+
+  metadata = {
+    ssh-keys = "${local.gce_user}:${file(local.gce_public_key_path)}"
+  }
+
+  provisioner "file" {
+    source      = "assets/index.html"
+    destination = "/home/${local.gce_user}/index.html"
+
+    connection {
+      type     = "ssh"
+      user     = "terraform"
+      private_key = file("assets/terraform_key")
+      host = google_compute_instance.webserver.network_interface.0.access_config.0.nat_ip
+    }
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo apt update",
+      "sudo apt install nginx -y",
+      "sudo rm -rf /var/www/html/*.html",
+      "sudo mv /home/${local.gce_user}/index.html /var/www/html/index.html",
+    ]
+
+    connection {
+      type     = "ssh"
+      user     = "terraform"
+      private_key = file("assets/terraform_key")
+      host = google_compute_instance.webserver.network_interface.0.access_config.0.nat_ip
+    }
+  }
+
+  boot_disk {
+    initialize_params {
+      image = "debian-cloud/debian-9"
+    }
+  }
+
+  network_interface {
+    subnetwork = google_compute_subnetwork.bastion-public.self_link
+
+    access_config {
+      nat_ip = ""
+    }
+  }
 }
 
 # Add the NAT server
@@ -119,4 +169,8 @@ module "nat-service" {
   source = "./nat"
   region = var.gcp_region
   subnetwork = google_compute_network.bastion.self_link
+}
+
+output "webserver-external-ip" {
+  value = google_compute_instance.webserver.network_interface.0.access_config.0.nat_ip
 }
